@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+	<script src="../plugins/bower_components/jquery/dist/jquery.min.js"></script>
+    <style>
+      html, body, #map-canvas {
+        height: 100%;
+        margin: 0px;
+        padding: 0px
+      }
+      .controls {
+        margin-top: 16px;
+        border: 1px solid transparent;
+        border-radius: 2px 0 0 2px;
+        box-sizing: border-box;
+        -moz-box-sizing: border-box;
+        height: 32px;
+        outline: none;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      }
+
+      #pac-input {
+        background-color: #fff;
+        padding: 0 11px 0 13px;
+        width: 600px;
+        font-family: Roboto;
+        font-size: 15px;
+        font-weight: 300;
+        text-overflow: ellipsis;
+border-radius:6px;
+margin-left:5px;
+
+      }
+
+      #pac-input:focus {
+        border-color: #4d90fe;
+        margin-left: -1px;
+        padding-left: 14px;  /* Regular padding-left + 1. */
+        width: 401px;
+      }
+
+      .pac-container {
+        font-family: Roboto;
+      }
+
+      #type-selector {
+        color: #fff;
+        background-color: #4d90fe;
+        padding: 5px 11px 0px 11px;
+      }
+
+      #type-selector label {
+        font-family: Roboto;
+        font-size: 13px;
+        font-weight: 300;
+      }
+	  
+
+#map-canvas img {
+	max-width: none !important;
+}
+.gm-style-iw {
+	width: 350px !important;
+	top: 15px !important;
+	left: 0px !important;
+	background-color: #fff;
+	box-shadow: 0 1px 6px rgba(178, 178, 178, 0.6);
+	border: 1px solid rgba(72, 181, 233, 0.6);
+	border-radius: 2px 2px 10px 10px;
+}
+.iw-container {
+  overflow: hidden;
+}
+#iw-container .iw-title {
+	font-family: 'Open Sans Condensed', sans-serif;
+	font-size: 16px;
+	font-weight: 700;
+	padding: 10px;
+	background-color: #48b5e9;
+	color: white;
+	margin: 0;
+	border-radius: 2px 2px 0 0;
+}
+#iw-container .iw-content {
+	font-size: 13px;
+	line-height: 18px;
+	font-weight: 400;
+	margin-right: 1px;
+	padding: 15px 5px 20px 15px;
+	max-height: 100%;
+	overflow-y: hidden;
+	overflow-x: hidden;
+}
+.iw-content img {
+	float: right;
+	margin: 0 5px 5px 10px;	
+}
+.iw-subTitle {
+	font-size: 16px;
+	font-weight: 700;
+	padding: 5px 0;
+}
+.iw-bottom-gradient {
+	position: absolute;
+	width: 326px;
+	height: 25px;
+	bottom: 10px;
+	right: 18px;
+	background: linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%);
+	background: -webkit-linear-gradient(top, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%);
+	background: -moz-linear-gradient(top, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%);
+	background: -ms-linear-gradient(top, rgba(255,255,255,0) 0%, rgba(255,255,255,1) 100%);
+}	  
+
+.legenda {
+  background-color: #F5F5F5; /* cor de fundo */
+  border-radius: 10px; /* bordas arredondadas */
+  border: 1px solid #CCCCCC; /* borda */
+  display: inline-flex; /* torna a altura da div ajustada ao conteúdo interno */
+  padding: 5px; /* adiciona um pequeno espaçamento interno */
+}
+
+.legenda p {
+  font-family: 'Roboto', sans-serif; /* altera a fonte para Roboto */
+  font-weight: bold; /* deixa o texto em negrito */
+  font-size: 1.1em; /* aumenta o tamanho da fonte em 10% */
+  margin: 0; /* remove a margem padrão */
+}
+
+
+#loader {
+  position: fixed;
+  display: none;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9999;
+  background-color: #ffffff;
+  opacity: 0.7;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#loader p {
+  text-align: center;
+}
+
+
+.loader {
+  border: 6px solid #f3f3f3;
+  border-top: 6px solid #3498db;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 2s linear infinite !important;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+
+}
+
+
+    </style>
+
+
+    <script>
+// This example adds a search box to a map, using the Google Place Autocomplete
+// feature. People can enter geographical searches. The search box will return a
+// pick list containing a mix of places and predicted search terms.
+
+// Read a page's GET URL variables and return them as an associative array.
+
+// variável para armazenar os polígonos já desenhados no mapa
+
+
+var drawnPolygons = [];
+
+
+function initialize() {
+
+  var markers = [];
+
+  var map = new google.maps.Map(document.getElementById('map-canvas'), {
+          zoom: 12,
+          center: {lat: -28.643387, lng: 153.612224},
+          mapTypeControl: true,
+    mapTypeId: 'satellite',
+          mapTypeControlOptions: {
+              style: google.maps.MapTypeControlStyle.HORIZONTAL_BAR,
+              position: google.maps.ControlPosition.BOTTOM_CENTER
+          },
+          zoomControl: true,
+          zoomControlOptions: {
+              position: google.maps.ControlPosition.LEFT_CENTER
+          },
+          scaleControl: true,
+          streetViewControl: true,
+          streetViewControlOptions: {
+              position: google.maps.ControlPosition.LEFT_TOP
+          },
+          fullscreenControl: true
+        });
+
+
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(function(position) {
+      var pos = {
+        lat: position.coords.latitude,
+        lng: position.coords.longitude
+      };
+
+      map.setCenter(pos);
+
+    }, function() {
+      // Caso não seja possível obter a localização do usuário, defina uma localização padrão aqui
+      var pos = {
+        lat: -34.397,
+        lng: 150.644
+      };
+
+      map.setCenter(pos);
+
+    });
+  } else {
+    // Caso o navegador não suporte a API de geolocalização, defina uma localização padrão aqui
+    var pos = {
+      lat: -34.397,
+      lng: 150.644
+    };
+
+    map.setCenter(pos);
+
+  }
+  
+  
+
+var geocoder = new google.maps.Geocoder;
+  map.setZoom(15);
+geocoder.geocode({'location': pos}, function(results, status) {
+          if (status === 'OK') {
+            if (results[1]) {
+              $('#pac-input').val(results[1].formatted_address);
+			  for (var i = 0; i < results[1].address_components.length; i++)
+				  {
+					var addr = results[1].address_components[i];
+					var getCountry;
+					/*if (addr.types[0] == 'country'){
+					  getCountry = addr.long_name;
+					  $('#WC_GEN_MUN', window.parent.document).val(getCountry);
+					  //$('#WC_GEN_MUN').val(getCountry);
+					  }*/
+					  if (addr.types[0] == 'administrative_area_level_2') 
+						{	
+						  getEndPart = addr.long_name;
+						  $('#WC_GEN_MUN', window.parent.document).val(getEndPart);
+						} 
+				  }
+					
+            }
+          }
+        });
+        google.maps.event.trigger(map, 'resize');
+
+
+
+
+  // Create the search box and link it to the UI element.
+  var input = /** @type {HTMLInputElement} */(
+      document.getElementById('pac-input'));
+  map.controls[google.maps.ControlPosition.TOP_LEFT].push(input);
+
+  var searchBox = new google.maps.places.SearchBox(
+    /** @type {HTMLInputElement} */(input));
+
+
+  google.maps.event.addListener(searchBox, 'places_changed', function() {
+    var places = searchBox.getPlaces();
+   if (places.length == 0) {
+      return;
+    }
+ 
+    // For each place, get the icon, place name, and location.
+    markers = [];
+    var bounds = new google.maps.LatLngBounds();
+    for (var i = 0, place; place = places[i]; i++) {
+
+      // Create a marker for each place.
+      
+
+
+      bounds.extend(place.geometry.location);
+
+
+    }
+
+
+	var selectedPlace = places[0];
+	
+
+    map.fitBounds(bounds);
+	  map.setZoom(15);
+
+
+  });
+  // [END region_getplaces]
+
+
+
+  // Bias the SearchBox results towards places that are within the bounds of the
+  // current map's viewport.
+  google.maps.event.addListener(map, 'bounds_changed', function() {
+    var bounds = map.getBounds();
+    searchBox.setBounds(bounds);
+  });
+  
+
+
+    function CenterControl(controlDiv, map) {
+
+        // Set CSS for the control border.
+        var controlUI = document.createElement('div');
+        controlUI.style.backgroundColor = '#fff';
+        controlUI.style.border = '2px solid #fff';
+        controlUI.style.borderRadius = '3px';
+        controlUI.style.boxShadow = '0 2px 6px rgba(0,0,0,.3)';
+        controlUI.style.cursor = 'pointer';
+        controlUI.style.marginBottom = '10px';
+        controlUI.style.textAlign = 'center';
+       
+        controlDiv.appendChild(controlUI);
+
+        // Set CSS for the control interior.
+        var controlText = document.createElement('div');
+        controlText.style.color = 'rgb(25,25,25)';
+        controlText.style.fontFamily = 'Roboto,Arial,sans-serif';
+        controlText.style.fontSize = '16px';
+        controlText.style.lineHeight = '38px';
+        controlText.style.paddingLeft = '5px';
+        controlText.style.paddingRight = '5px';
+        controlText.innerHTML = 'Buscar Terrenos na área';
+        controlUI.appendChild(controlText);
+
+        //para buscar poligonos na area
+        controlUI.addEventListener('click', function () {
+			var loaderDiv = document.getElementById("loader");
+	
+			document.getElementById("loader").style.display = "block";
+
+			 new Promise(function(resolve, reject) {
+				procuraterrenos(); // Chama a função de busca de terrenos
+				resolve();
+			  }).then(function() {
+				setTimeout(function() {
+					document.getElementById("loader").style.display = "none";
+				 }, 1000);
+			  });
+
+        });
+    }
+
+
+ 
+
+
+
+  var centerControlDiv = document.createElement('div');
+    var centerControl = new CenterControl(centerControlDiv, map);
+
+    
+    centerControlDiv.index = 1;
+    map.controls[google.maps.ControlPosition.BOTTOM_CENTER].push(centerControlDiv);
+	
+	function isPolygonInMapBounds(polygon, map) {
+	  // Obtém a área de visualização do polígono
+	  var polygonBounds = polygon.getBounds();
+
+	  // Obtém a área de visualização atual do mapa
+	  var mapBounds = map.getBounds();
+
+	  // Verifica se as áreas se sobrepõem
+	  return mapBounds.intersects(polygonBounds);
+	}	
+	
+	function isPolygonDrawn(polygonId) {
+	  for (var i = 0; i < drawnPolygons.length; i++) {
+		if (drawnPolygons[i] === polygonId) {
+		  return true;
+		}
+	  }
+	  return false;
+	}
+	
+	function showLoader() {
+	  var loader = document.getElementById("loader");
+	  loader.style.display = "block";
+	}	
+
+	function hideLoader() {
+	  var loader = document.getElementById("loader");
+	  loader.style.display = "none";
+	}	
+	
+	
+	function procuraterrenos() {
+		//Pegar as coordenadas já existentes
+		var coordenadas = '';//$('#'+varid, window.parent.document).val();
+		var bounds = map.getBounds();
+		
+		
+		<%ResultSet rpoligonos = framework.ExecSQL("SELECT CRM_TERR_ID,TXT_STYLEURL,T.MAP_POLBORD_COLOR,CRM_TERR_NOME,CRM_TERR_END, WC_GEN_MUN,CRM_TERR_ENDCOMP, T.CRM_TERR_STATUS_ID, CRM_TERR_STATUS_DESC FROM CRM_TERR T INNER JOIN CRM_TERR_STATUS S ON T.CRM_TERR_STATUS_ID = S.CRM_TERR_STATUS_ID");
+		
+		while (rpoligonos.next()){%>
+			coordenadas = '<%out.print(rpoligonos.getString("TXT_STYLEURL").trim());%>';		
+		
+		//Verifica se tem informação
+		if(coordenadas != ""){
+	
+		poligono = coordenadas.split(";");
+		
+		//Verifica se tem pontos suficientes: mínimo 3 
+		if(poligono.length >= 3){
+			var previousCoords = [];
+			var ponto1 = poligono[1];
+			//Monta as coordenadas
+			for (var i = 0; i < poligono.length; i++) {
+				var ponto = poligono[i];
+				var ponto_arr = ponto.split(",");
+				var point = {
+				  lat: Number(ponto_arr[0]),
+				  lng: Number(ponto_arr[1]), 
+				};
+				
+				previousCoords.push(point);
+			}
+
+		
+			var ponto1_a = ponto1.split(",");
+			var endcomp = "";
+			
+
+			
+			//Cria o poligono
+			var previous = new google.maps.Polygon({
+				 paths: previousCoords,
+				 strokeWeight: 6,
+               strokeColor:  '<%out.print(rpoligonos.getString("MAP_POLBORD_COLOR").trim());%>',
+				 fillOpacity: 0.5,
+			});
+          
+			previous.set('codigo', '<%out.print(rpoligonos.getString("CRM_TERR_ID").trim());%>');	
+			previous.set('name', '<%out.print(rpoligonos.getString("CRM_TERR_NOME").trim());%>');
+			previous.set('endcomp', '<%out.print(rpoligonos.getString("CRM_TERR_ENDCOMP").trim());%>');
+			previous.set('textolegenda', '<%out.print(rpoligonos.getString("CRM_TERR_STATUS_DESC").trim());%>');
+			
+			var path = previous.getPath();
+			for (var j = 0; j < path.getLength(); j++) {
+			  if (bounds.contains(path.getAt(j)) && !isPolygonDrawn(previous.get('codigo'))) {
+				
+				if (!previous.getMap()) {
+					previous.setMap(map);
+					viewinfo(previous)
+					drawnPolygons.push(previous.get('codigo'));
+				}
+				break;
+			  }
+			}			
+
+	
+			//Coloca no mapa
+			//previous.setMap(map);
+
+		
+
+			function viewinfo(newPoly) {
+				google.maps.event.addListener(newPoly, 'mouseover', function(event) {
+	
+				var area = google.maps.geometry.spherical.computeArea(newPoly.getPath());
+				var areaStr = (area ).toFixed(2) + ' m²';
+				
+				var name = newPoly.get('name');
+				var endcomp = newPoly.get('endcomp');
+				
+				var firstpoint = newPoly.getPaths().getAt(0).getAt(0);	
+				
+				var geocoderOptions = {
+				  location: firstpoint
+				};				
+				
+				/*
+				geocoder.geocode(geocoderOptions, function(results, status) {
+				  if (status === 'OK') {
+					endcomp = results[0].formatted_address;
+				  } else {
+					endcomp = 'Erro na obtenção do endereço. '+status;
+				  }
+				});				
+				*/
+
+				function getContrastColor(hexColor) {
+				  // converte a cor em hexadecimal para RGB
+				  var r = parseInt(hexColor.substr(1,2), 16);
+				  var g = parseInt(hexColor.substr(3,2), 16);
+				  var b = parseInt(hexColor.substr(5,2), 16);
+
+				  // calcula a luminosidade da cor de fundo usando a fórmula W3C
+				  var luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+
+				  // retorna a cor do texto apropriada com base na luminosidade da cor de fundo
+				  if (luminance > 0.5) {
+					return '#000000'; // preto
+				  } else {
+					return '#ffffff'; // branco
+				  }
+				}
+				var legendaCor = newPoly.get('strokeColor');
+				var textoCor = getContrastColor(legendaCor);
+				
+				var contentString = '<div id="iw-container">' +
+                    '<div class="iw-title">'+name+'</div>' +
+                    '<div class="iw-content">' +
+					'<div class="legenda" style="background-color: '+legendaCor+'; color: '+textoCor+';border: none;">'+
+					' <p>'+newPoly.get('textolegenda')+'</p>'+
+					'  </div>'+
+					'<p></p>' +
+                      '<div class="iw-subTitle">Endereço</div>' +
+                      '<p>'+endcomp+'</p>' +
+                      '<div class="iw-subTitle">Área</div>' +
+                      '<p>'+areaStr+'</p>' +
+					  '<button id="button-link">Ir para o cadastro</button>' +
+ 
+                   '</div>' +
+                    '<div class="iw-bottom-gradient"></div>' +
+                  '</div>';
+
+				
+				var infoWindow = new google.maps.InfoWindow({
+				  content: contentString,
+				  closeBoxURL: ''
+				});				
+
+												
+								
+				infoWindow.setPosition(event.latLng);
+				infoWindow.open(map);	
+				
+				infoWindow.addListener('domready', function() {
+				  var button = document.getElementById('button-link');
+                  var codigo_terr = newPoly.get('codigo');
+                  var linkterr = 'https://www.onesuite.com.br/logcphom3/webpages/v1/webresource.do?pageid=GENERICVIEW&actiondet=Cadastro%20de%20Terrenos&codproc=CRM_TERR&prcor=CRM_TERR&viewaction=true&cmbpsq=CRM_TERR_ID&codnivel=BROWSE&usr=PUBLIC&psw=public&pesqui='+codigo_terr;
+				  button.addEventListener('click', function() {
+					window.open(linkterr, '_blank');
+				  });
+				});				
+
+				google.maps.event.addListener(newPoly, 'mouseout', function(event) {
+				  infoWindow.close();
+				});						
+				});
+			}
+				
+		}
+	
+	}
+      
+		<%}%>
+		<%rpoligonos.close();%>
+	}	
+}
+
+
+
+    </script>
+    <style>
+    </style>
+        <link rel="icon" type="image/png" href="images/logo.png" sizes="16x16">
+        <link rel="icon" type="image/png" href="images/logo.png" sizes="32x32">
+        <link rel="icon" type="image/png" href="images/logo.png" sizes="96x96">
+
+     <title>OneSuite - Pesquisar no Mapa</title>
+
+   
+  </head>
+  <body>
+      <div id="loader" style="display: none;">
+        <p>Buscando terrenos...</p>
+    </div>
+<form style="font-size:23px">
+</form>
+    <input id="pac-input" class="controls" type="text" placeholder="Pesquisar local, endereço, cidade ">
+    <div id="map-canvas"></div>
+
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBgVy-BunCrDFOY6_nh0zTSv5Qy8QX3dCQ&callback=initialize&libraries=drawing,places"></script>
+
+	
+  </body>
